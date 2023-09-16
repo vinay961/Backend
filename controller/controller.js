@@ -94,3 +94,21 @@ exports.userInfo = async (req,res) =>{
     }
 }
 
+exports.logout = async (req,res,next) =>{
+    try {
+        const cookieOption = {
+            expire : new Date(),
+            httpOnly:true
+        }
+        res.cookie("token",null,cookieOption);
+        res.status(201).json({
+            success:true,
+            message:"Logout Sucessful"
+        })
+    } catch (error) {
+        res.status(400).json({
+            success:false,
+            message:error.message
+        })
+    }
+}
