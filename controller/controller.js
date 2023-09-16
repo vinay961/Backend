@@ -36,7 +36,7 @@ exports.signUp = async(req,res)=>{
     }
 }
 
-exports.signIn = async (req, res) => {
+exports.signIn = async (req, res,next) => {
     const {email,password} = req.body
     console.log(email,password)
     if(!email || !password){
@@ -68,6 +68,7 @@ exports.signIn = async (req, res) => {
             success: true,
             message: "Successfully signed in"
         });
+        next();
     } catch (error) {
         console.log(error);
         res.status(400).json({

@@ -1,6 +1,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose')
 const jwt = require('jsonwebtoken')
+const bcrypt = require('bcrypt')
 
 const UserSchema = new mongoose.Schema({
     name:{
@@ -25,6 +26,13 @@ const UserSchema = new mongoose.Schema({
     }
 },{timestamps:true});
 
+// we made a function that triggred when we save something
+UserSchema.pre('save',async function(next){
+    if(!this.isModified('password')){
+        return next();
+    }
+    this.password = await bcrypt.hash(this.password,10)
+})
 
 UserSchema.methods.generateJwtToken = function() {
     return jwt.sign(
