@@ -1,5 +1,6 @@
-const user = require('../model/userModel');
-const User = new user()
+const userSchema = require('../model/userModel');
+const User = new userSchema()
+const bcrypt = require('bcrypt')
 
 exports.signUp = async(req,res)=>{
     try {
@@ -8,7 +9,7 @@ exports.signUp = async(req,res)=>{
         if(!name || !email || !password || !confirmPassword){
             throw new Error("Some field is Empty.")
         }
-        const userExist =await user.findOne({email});
+        const userExist =await userSchema.findOne({email});
         if(userExist){
             throw new Error("User email is already registered.")
         }
@@ -16,7 +17,7 @@ exports.signUp = async(req,res)=>{
             throw new Error("Password and Confirm Password will not be matched.")
         }
 
-        const User = await user.create({
+        const User = await userSchema.create({
             name,
             email,
             password,
@@ -44,31 +45,31 @@ exports.signIn = async (req, res,next) => {
     }
 
     try {
-        const User = await user
+        const User = await userSchema
             .findOne({email})
             .select("+password");
         
-        if(!User || User.password !== password){
+        if(!User || !(await bcrypt.compare(password,User.password))){
             throw new Error("Invalid credential's")
         }
 
         // creating JWT Token
         const token = User.generateJwtToken()
-        user.password=undefined
+        userSchema.password=undefined
 
         const cookieOption={
             maxAge:24*60*60*1000,
             httpOnly:true
         };
 
-        res.cookie("JWT-token",token,cookieOption);
+        res.cookie("token",token,cookieOption);
 
 
         res.status(201).json({
             success: true,
-            message: "Successfully signed in"
+            message: "Successfully signed in",
         });
-        next();
+    
     } catch (error) {
         console.log(error);
         res.status(400).json({
@@ -82,7 +83,7 @@ exports.userInfo = async (req,res) =>{
     const id = req.user.id
 
     try {
-        const member = await user.findById(id);
+        const member = await userSchema.findById(id);
         return res.status(201).json({
             success:true,
             member
