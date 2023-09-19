@@ -1,6 +1,7 @@
 const userSchema = require('../model/userModel');
 const User = new userSchema()
 const bcrypt = require('bcrypt')
+const crypto = require('crypto')
 
 exports.signUp = async(req,res)=>{
     try {
@@ -106,6 +107,88 @@ exports.logout = async (req,res,next) =>{
         res.status(201).json({
             success:true,
             message:"Logout Sucessful"
+        })
+    } catch (error) {
+        res.status(400).json({
+            success:false,
+            message:error.message
+        })
+    }
+}
+
+exports.forgotPassword = async(req,res) =>{
+    try {
+        const email = req.body.email;
+
+        if(!email){
+            res.status(400).json({
+                success:false,
+                message:"Email is Required in ordered to Reset Password"
+            })
+        }
+        const valid = await userSchema.findOne({email})
+        if(!valid){
+            res.status(400).json({
+                success:false,
+                message:"User is not found in our database."
+            })
+        }
+        const forgotPasswordToken = User.getForgetPasswordToken();
+        await valid.save();
+        res.status(200).json({
+            success:true,
+            token:forgotPasswordToken
+        })
+    } catch (error) {
+        res.status(400).json({
+            success:false,
+            message:error.message
+        })
+    }
+}
+
+exports.resetPassword = async(req,res) =>{
+    const token  = req.params.token;
+    const {password,confirmPassword} = req.body;
+
+    if(!password && !confirmPassword){
+        res.status(400).json({
+            success:false,
+            message:"password and confirmPassword is required"
+        })
+    }
+    if(password!=confirmPassword){
+        res.status(400).json({
+            success:false,
+            message:"Both password and confirmPassword must be equal"
+        })
+    }
+    try {
+        const hashToken = crypto.createHash("sha256").update(token).digest("hex");
+
+        const valid = await userSchema.findOne({
+            forgotPasswordToken:hashToken,
+            forgotPasswordExpiryDate:{
+                $gt : new Date()
+            }
+        });
+    
+        if(!valid){
+            res.status(400).json({
+                success:false,
+                message:"Invalid Token or token is expired"
+            })
+        }
+        valid.password = password;
+        await valid.save();
+    
+        valid.forgotPasswordToken = undefined;
+        valid.forgotPasswordExpiryDate = undefined;
+        valid.password = undefined
+    
+        res.status(200).json({
+            success:true,
+            valid
         })
     } catch (error) {
         res.status(400).json({
