@@ -42,16 +42,18 @@ UserSchema.methods.generateJwtToken = function() {
         { expiresIn: 24 * 60 * 60 } // Expiration time in seconds (24 hours)
     );
 };
-UserSchema.methods.getForgetPasswordToken = function() {
+UserSchema.methods.getForgotPasswordToken = function() {
     const forgotToken = crypto.randomBytes(20).toString("hex");
-    this.forgetPasswordtoken = crypto
-        .createHash("sha256")
-        .update(forgotToken)
-        .digest("hex");
+    this.forgotPasswordToken = crypto
+      .createHash("sha256")
+      .update(forgotToken)
+      .digest("hex");
+      console.log(forgotToken)
+      this.forgotPasswordExpiryDate = new Date(Date.now() + 20 * 60 * 1000); // 20 minutes from now
 
-    this.forgetPasswordExpiryDate = Date.now() + 20 * 60 * 1000;
     return forgotToken;
-};
+  };
+  
 
 const user = mongoose.model("LoginUser",UserSchema);
 module.exports = user;

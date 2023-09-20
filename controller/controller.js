@@ -133,8 +133,12 @@ exports.forgotPassword = async(req,res) =>{
                 message:"User is not found in our database."
             })
         }
-        const forgotPasswordToken = User.getForgetPasswordToken();
+        const forgotPasswordToken = valid.getForgotPasswordToken();
+    
         await valid.save();
+
+        const hashedToken = crypto.createHash("sha256").update(forgotPasswordToken).digest("hex");
+
         res.status(200).json({
             success:true,
             token:forgotPasswordToken
@@ -147,53 +151,71 @@ exports.forgotPassword = async(req,res) =>{
     }
 }
 
-exports.resetPassword = async(req,res) =>{
-    const token  = req.params.token;
-    const {password,confirmPassword} = req.body;
-
-    if(!password && !confirmPassword){
-        res.status(400).json({
-            success:false,
-            message:"password and confirmPassword is required"
-        })
-    }
-    if(password!=confirmPassword){
-        res.status(400).json({
-            success:false,
-            message:"Both password and confirmPassword must be equal"
-        })
-    }
+exports.resetPassword = async (req, res) => {
+    const token = req.query.token; // Access token from query parameter
+    const { password, confirmPassword } = req.body;
+  
     try {
-        const hashToken = crypto.createHash("sha256").update(token).digest("hex");
-
-        const valid = await userSchema.findOne({
-            forgotPasswordToken:hashToken,
-            forgotPasswordExpiryDate:{
-                $gt : new Date()
-            }
+      // Check if password and confirmPassword are missing
+      if (!password || !confirmPassword) {
+        return res.status(400).json({
+          success: false,
+          message: "Password and confirmPassword are required.",
         });
-    
-        if(!valid){
-            res.status(400).json({
-                success:false,
-                message:"Invalid Token or token is expired"
-            })
-        }
-        valid.password = password;
-        await valid.save();
-    
-        valid.forgotPasswordToken = undefined;
-        valid.forgotPasswordExpiryDate = undefined;
-        valid.password = undefined
-    
-        res.status(200).json({
-            success:true,
-            valid
-        })
+      }
+  
+      // Check if password and confirmPassword match
+      if (password !== confirmPassword) {
+        return res.status(400).json({
+          success: false,
+          message: "Password and confirmPassword must match.",
+        });
+      }
+  
+      // Check if token is a string before hashing
+      if (typeof token !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid token format. The token must be a string.",
+        });
+      }
+  
+      // Hash the token to compare with the stored token
+      const hashToken = crypto.createHash("sha256").update(token).digest("hex");
+      // Find a user with the matching token and a non-expired reset token
+      const valid = await userSchema.findOne({
+        forgotPasswordToken: hashToken,
+        forgotPasswordExpiryDate: {
+          $gt: new Date(),
+        },
+      });
+  
+      if (!valid) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid Token or token has expired.",
+        });
+      }
+  
+      // Set the new password and save the user
+      valid.password = password;
+      await valid.save();
+  
+      // Clear the reset token and password field for security
+      valid.forgotPasswordToken = undefined;
+      valid.forgotPasswordExpiryDate = undefined;
+      valid.password = undefined;
+  
+      res.status(200).json({
+        success: true,
+        message: "Password reset successfully.",
+      });
     } catch (error) {
-        res.status(400).json({
-            success:false,
-            message:error.message
-        })
+      console.error(error);
+      res.status(500).json({
+        success: false,
+        message: "An error occurred while resetting the password.",
+        message:error.message
+      });
     }
-}
+  };
