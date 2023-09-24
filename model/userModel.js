@@ -44,7 +44,7 @@ UserSchema.methods.generateJwtToken = function() {
 };
 UserSchema.methods.getForgotPasswordToken = function() {
     const forgotToken = crypto.randomBytes(20).toString("hex");
-    this.forgotPasswordToken = crypto
+    this.forgotToken = crypto
       .createHash("sha256")
       .update(forgotToken)
       .digest("hex");

@@ -178,10 +178,10 @@ exports.resetPassword = async (req, res) => {
           success: false,
           message: "Invalid token format. The token must be a string.",
         });
-      }
-  
-      // Hash the token to compare with the stored token
+      };
+
       const hashToken = crypto.createHash("sha256").update(token).digest("hex");
+
       // Find a user with the matching token and a non-expired reset token
       const valid = await userSchema.findOne({
         forgotPasswordToken: hashToken,
